@@ -4,6 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+
+#include "InputAction.h"
+
 #include "MyPlane.generated.h"
 
 class UBoxComponent;
@@ -12,7 +15,8 @@ class UArrowComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UFloatingPawnMovement;
-class UMyStaticMeshComponent;
+class UInputAction;
+class ARocket;
 
 UCLASS()
 class P260415_CPP_API AMyPlane : public APawn
@@ -41,10 +45,10 @@ public:
 	TObjectPtr<UStaticMeshComponent> Body;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components)
-	TObjectPtr<UMyStaticMeshComponent> Left;
+	TObjectPtr<UStaticMeshComponent> Left;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components)
-	TObjectPtr<UMyStaticMeshComponent> Right;
+	TObjectPtr<UStaticMeshComponent> Right;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components)
 	TObjectPtr<UArrowComponent> Arrow;
@@ -67,9 +71,19 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Data)
 	float BoostValue = 0.5f;
 
-	void Pitch(float Value);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	TObjectPtr<UInputAction> IA_Rotate;
 
-	void Roll(float Value);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	TObjectPtr<UInputAction> IA_Fire;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	TObjectPtr<UInputAction> IA_Boost;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data")
+	TSubclassOf<ARocket> RocketTemplate;
+
+	void Rotate(const FInputActionValue& Value);
 
 	void Fire();
 

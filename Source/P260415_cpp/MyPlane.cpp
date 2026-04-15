@@ -10,7 +10,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
 #include "Kismet/GameplayStatics.h"
-#include "MyStaticMeshComponent.h"
+#include "EnhancedInputComponent.h"
 
 #include "Rocket.h"
 
@@ -34,19 +34,19 @@ AMyPlane::AMyPlane()
 		Body->SetStaticMesh(SM_Body.Object);
 	}
 
-	Left = CreateDefaultSubobject<UMyStaticMeshComponent>(TEXT("Left"));
-	Right = CreateDefaultSubobject<UMyStaticMeshComponent>(TEXT("Right"));
+	Left = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Left"));
+	Right = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Right"));
 
 	Left->SetupAttachment(Body);
 	Right->SetupAttachment(Body);
 
-	/*static ConstructorHelpers::FObjectFinder<UStaticMesh> SM_Propeller(TEXT("/Script/Engine.StaticMesh'/Game/Assets/SM_P38_Propeller.SM_P38_Propeller'"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> SM_Propeller(TEXT("/Script/Engine.StaticMesh'/Game/Assets/SM_P38_Propeller.SM_P38_Propeller'"));
 
 	if (SM_Propeller.Succeeded())
 	{
 		Left->SetStaticMesh(SM_Propeller.Object);
 		Right->SetStaticMesh(SM_Propeller.Object);
-	}*/
+	}
 
 	Left->SetRelativeLocation(FVector(37.1f, -21.4f, 0.5f));
 	Right->SetRelativeLocation(FVector(37.1f, 21.4f, 0.5f));
@@ -69,6 +69,7 @@ AMyPlane::AMyPlane()
 	Movement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("Movement"));
 	Movement->MaxSpeed = 5000;
 	BoostValue = 0.5f;
+
 }
 
 // Called when the game starts or when spawned
@@ -82,6 +83,8 @@ void AMyPlane::BeginPlay()
 void AMyPlane::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	Left->AddRelativeRotation(FRotator(0, 0, DeltaTime * 4800.0f));
+	Right->AddRelativeRotation(FRotator(0, 0, DeltaTime * 4800.0f));
 	AddMovementInput(GetActorForwardVector(), BoostValue);
 }
 
@@ -91,27 +94,36 @@ void AMyPlane::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 	
-	PlayerInputComponent->BindAxis(TEXT("Pitch"), this, &AMyPlane::Pitch);
+	/*PlayerInputComponent->BindAxis(TEXT("Pitch"), this, &AMyPlane::Pitch);
 	PlayerInputComponent->BindAxis(TEXT("Roll"), this, &AMyPlane::Roll);
 	PlayerInputComponent->BindAction(TEXT("Fire"), EInputEvent::IE_Pressed, this, &AMyPlane::Fire);
 	PlayerInputComponent->BindAction(TEXT("Boost"), EInputEvent::IE_Pressed, this, &AMyPlane::Boost);
-	PlayerInputComponent->BindAction(TEXT("Boost"), EInputEvent::IE_Released, this, &AMyPlane::UnBoost);
+	PlayerInputComponent->BindAction(TEXT("Boost"), EInputEvent::IE_Released, this, &AMyPlane::UnBoost);*/
+
+	UEnhancedInputComponent* UIC = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+	if (UIC)
+	{
+		UIC->BindAction(IA_Rotate, ETriggerEvent::Triggered, this, &AMyPlane::Rotate);
+		UIC->BindAction(IA_Fire, ETriggerEvent::Triggered, this, &AMyPlane::Fire);
+		UIC->BindAction(IA_Boost, ETriggerEvent::Triggered, this, &AMyPlane::Boost);
+		UIC->BindAction(IA_Boost, ETriggerEvent::Completed, this, &AMyPlane::UnBoost);
+	}
 
 }
 
-void AMyPlane::Pitch(float Value)
+void AMyPlane::Rotate(const FInputActionValue& Value)
 {
-	AddActorLocalRotation(FRotator(RotationSpeed * Value * UGameplayStatics::GetWorldDeltaSeconds(GetWorld()), 0, 0));
-}
+	UE_LOG(LogTemp, Warning, TEXT("Rotate"));
 
-void AMyPlane::Roll(float Value)
-{
-	AddActorLocalRotation(FRotator(0, 0,RotationSpeed * Value * UGameplayStatics::GetWorldDeltaSeconds(GetWorld())));
+	FVector2D Rot = Value.Get<FVector2D>();
+	Rot = Rot * UGameplayStatics::GetWorldDeltaSeconds(GetWorld()) * 50.0f;
+
+	AddActorLocalRotation(FRotator(Rot.Y,0,Rot.X));
 }
 
 void AMyPlane::Fire()
 {
-	GetWorld()->SpawnActor<ARocket>(ARocket::StaticClass(), Arrow->K2_GetComponentToWorld());
+	GetWorld()->SpawnActor<ARocket>(RocketTemplate, Arrow->K2_GetComponentToWorld());
 }
 
 void AMyPlane::Boost()
